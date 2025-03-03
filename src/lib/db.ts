@@ -198,7 +198,9 @@ export async function getEmployeeStats(weekStart?: string, weekEnd?: string) {
     }
 
     // Add hours to employee total
-    const employeeName = shift.employees?.name || "Unknown";
+    const employeeName = Array.isArray(shift.employees)
+      ? shift.employees[0]?.name || "Unknown"
+      : shift.employees?.name || "Unknown";
     if (employeeHours[employeeName]) {
       employeeHours[employeeName] += hours;
     } else {

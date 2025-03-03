@@ -54,7 +54,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div
       className={cn(
-        "bg-white p-4 border-b flex flex-wrap items-center gap-3",
+        "bg-white p-2 border-b flex flex-wrap items-center gap-2",
         className,
       )}
     >
@@ -131,11 +131,11 @@ const FilterBar: React.FC<FilterBarProps> = ({
           filters.shiftType !== "all-shifts" ||
           filters.searchTerm) && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={clearFilters}
-            className="h-10 w-10"
-            title="Effacer les filtres"
+            className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+            title="Réinitialiser les filtres"
           >
             <X className="h-4 w-4" />
           </Button>

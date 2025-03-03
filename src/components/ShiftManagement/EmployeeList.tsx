@@ -27,6 +27,7 @@ interface EmployeeListProps {
   onEmployeeSelect?: (employeeId: string) => void;
   onShiftClick?: (shiftId: string) => void;
   selectedEmployeeId?: string;
+  className?: string;
 }
 
 const EmployeeList: React.FC<EmployeeListProps> = ({
@@ -124,6 +125,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   onEmployeeSelect = () => {},
   onShiftClick = () => {},
   selectedEmployeeId = "",
+  className = "",
 }) => {
   // Setup drop target for unassigned shifts
   const [{ isOver }, drop] = useDrop(() => ({
@@ -169,7 +171,9 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   }));
 
   return (
-    <Card className="h-full w-full max-w-[250px] bg-white border-r shadow-none rounded-none">
+    <Card
+      className={`h-full w-full max-w-[250px] bg-white border-r shadow-none rounded-none ${className}`}
+    >
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-bold flex items-center">

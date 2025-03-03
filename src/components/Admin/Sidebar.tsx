@@ -8,7 +8,9 @@ import {
   BarChart3,
   Settings,
   Utensils,
+  User,
 } from "lucide-react";
+import { NotificationCenter } from "@/components/ui/notification-center";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -45,11 +47,14 @@ export const Sidebar: React.FC = () => {
 
   return (
     <div className="hidden md:flex h-screen w-64 flex-col border-r bg-white p-6">
-      <div className="flex items-center gap-2 mb-8">
-        <div className="bg-blue-600 text-white p-1.5 rounded">
-          <Utensils className="h-5 w-5" />
+      <div className="flex items-center justify-between gap-2 mb-8">
+        <div className="flex items-center gap-2">
+          <div className="bg-blue-600 text-white p-1.5 rounded">
+            <Utensils className="h-5 w-5" />
+          </div>
+          <h1 className="text-xl font-bold">Burger Staff</h1>
         </div>
-        <h1 className="text-xl font-bold">Burger Staff</h1>
+        <NotificationCenter />
       </div>
 
       <div className="mb-6">
@@ -101,6 +106,17 @@ export const Sidebar: React.FC = () => {
           icon={<BarChart3 className="h-5 w-5" />}
           label="Rapports"
           href="/reports"
+        />
+      </nav>
+
+      <div className="text-xs font-semibold text-slate-400 mt-6 mb-2 pl-3 uppercase tracking-wider">
+        Portail
+      </div>
+      <nav className="space-y-1.5">
+        <SidebarItem
+          icon={<User className="h-5 w-5" />}
+          label="Espace Employé"
+          href="/employee/login"
         />
       </nav>
 

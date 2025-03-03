@@ -226,7 +226,9 @@ export const fetchShifts = async (): Promise<Shift[]> => {
   return data.map((shift) => ({
     id: shift.id,
     employeeId: shift.employee_id,
-    employeeName: shift.employees?.name || "Unknown",
+    employeeName: Array.isArray(shift.employees)
+      ? shift.employees[0]?.name || "Unknown"
+      : shift.employees?.name || "Unknown",
     day: shift.day,
     startTime: shift.start_time,
     endTime: shift.end_time,
@@ -257,7 +259,9 @@ export const createShift = async (
   return {
     id: data.id,
     employeeId: data.employee_id,
-    employeeName: data.employees?.name || "Unknown",
+    employeeName: Array.isArray(data.employees)
+      ? data.employees[0]?.name || "Unknown"
+      : data.employees?.name || "Unknown",
     day: data.day,
     startTime: data.start_time,
     endTime: data.end_time,
@@ -288,7 +292,9 @@ export const updateShift = async (shift: Shift): Promise<Shift | null> => {
   return {
     id: data.id,
     employeeId: data.employee_id,
-    employeeName: data.employees?.name || "Unknown",
+    employeeName: Array.isArray(data.employees)
+      ? data.employees[0]?.name || "Unknown"
+      : data.employees?.name || "Unknown",
     day: data.day,
     startTime: data.start_time,
     endTime: data.end_time,
@@ -329,7 +335,9 @@ export const fetchAbsences = async (): Promise<Absence[]> => {
   return data.map((absence) => ({
     id: absence.id,
     employeeId: absence.employee_id,
-    employeeName: absence.employees?.name || "Unknown",
+    employeeName: Array.isArray(absence.employees)
+      ? absence.employees[0]?.name || "Unknown"
+      : absence.employees?.name || "Unknown",
     startDate: absence.start_date,
     endDate: absence.end_date,
     reason: absence.reason,
@@ -358,7 +366,9 @@ export const createAbsence = async (
   return {
     id: data.id,
     employeeId: data.employee_id,
-    employeeName: data.employees?.name || "Unknown",
+    employeeName: Array.isArray(data.employees)
+      ? data.employees[0]?.name || "Unknown"
+      : data.employees?.name || "Unknown",
     startDate: data.start_date,
     endDate: data.end_date,
     reason: data.reason,
@@ -389,7 +399,9 @@ export const updateAbsence = async (
   return {
     id: data.id,
     employeeId: data.employee_id,
-    employeeName: data.employees?.name || "Unknown",
+    employeeName: Array.isArray(data.employees)
+      ? data.employees[0]?.name || "Unknown"
+      : data.employees?.name || "Unknown",
     startDate: data.start_date,
     endDate: data.end_date,
     reason: data.reason,

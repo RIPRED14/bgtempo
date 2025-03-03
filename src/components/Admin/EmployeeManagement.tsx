@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,11 @@ import {
   ArrowUpDown,
   Filter,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { DbSyncService } from "@/lib/db-sync";
+import { MockDatabase } from "@/lib/mock-db";
 
 interface Employee {
   id: string;
@@ -137,6 +140,9 @@ const EmployeeManagement: React.FC = () => {
     null,
   );
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [validationError, setValidationError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter employees based on search term and filters
   const filteredEmployees = employees
@@ -216,12 +222,14 @@ const EmployeeManagement: React.FC = () => {
   const handleAddEmployee = () => {
     setEditMode(false);
     setSelectedEmployee(null);
+    setValidationError("");
     setDialogOpen(true);
   };
 
   const handleEditEmployee = (employee: Employee) => {
     setEditMode(true);
     setSelectedEmployee(employee);
+    setValidationError("");
     setDialogOpen(true);
   };
 
@@ -230,49 +238,285 @@ const EmployeeManagement: React.FC = () => {
     setConfirmDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedEmployee) {
-      setEmployees(employees.filter((e) => e.id !== selectedEmployee.id));
-      setConfirmDeleteOpen(false);
+      setIsDeleting(true);
+
+      try {
+        // Show deleting indicator using the notification service if available
+        let notificationId;
+        if (window.showNotification) {
+          notificationId = window.showNotification({
+            title: "Suppression en cours",
+            description: "Suppression de l'employé en cours...",
+            variant: "warning",
+            position: "top-right",
+            autoClose: false,
+          });
+        } else {
+          // Fallback to the old method
+          const deletingIndicator = document.createElement("div");
+          deletingIndicator.className =
+            "fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+          deletingIndicator.innerHTML = `
+            <div class="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+            <span>Suppression de l'employé en cours...</span>
+          `;
+          document.body.appendChild(deletingIndicator);
+        }
+
+        // Store employee name for the success message
+        const employeeName = selectedEmployee.name;
+        const employeeId = selectedEmployee.id;
+
+        // First delete from mock database directly
+        const deleteResult = MockDatabase.deleteEmployee(employeeId);
+        if (!deleteResult) {
+          throw new Error(`Échec de la suppression de l'employé ${employeeId}`);
+        }
+
+        // Update local state
+        const updatedEmployees = employees.filter((e) => e.id !== employeeId);
+
+        // Update state
+        setEmployees(updatedEmployees);
+
+        // Sync with database - update the employees list
+        await DbSyncService.syncEmployees(updatedEmployees);
+
+        // Close dialog
+        setConfirmDeleteOpen(false);
+
+        // Show success message using the notification service if available
+        if (window.showNotification) {
+          // Dismiss the loading notification if it exists
+          if (notificationId && window.dismissNotification) {
+            window.dismissNotification(notificationId);
+          }
+
+          window.showNotification({
+            title: "Suppression réussie",
+            description: `Employé ${employeeName} supprimé avec succès`,
+            variant: "success",
+            position: "top-right",
+          });
+        } else {
+          // Fallback to the old method
+          document.body.removeChild(deletingIndicator);
+          const successToast = document.createElement("div");
+          successToast.className =
+            "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+          successToast.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span>Employé ${employeeName} supprimé avec succès</span>
+          `;
+          document.body.appendChild(successToast);
+          setTimeout(() => document.body.removeChild(successToast), 3000);
+        }
+      } catch (error) {
+        console.error("Error deleting employee:", error);
+        // Show error message using the notification service if available
+        if (window.showNotification) {
+          // Dismiss the loading notification if it exists
+          if (notificationId && window.dismissNotification) {
+            window.dismissNotification(notificationId);
+          }
+
+          window.showNotification({
+            title: "Erreur",
+            description: "Erreur lors de la suppression de l'employé",
+            variant: "error",
+            position: "top-right",
+          });
+        } else {
+          // Fallback to the old method
+          const errorToast = document.createElement("div");
+          errorToast.className =
+            "fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+          errorToast.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+            <span>Erreur lors de la suppression de l'employé</span>
+          `;
+          document.body.appendChild(errorToast);
+          setTimeout(() => document.body.removeChild(errorToast), 3000);
+        }
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
-  const saveEmployee = (formData: any) => {
-    if (editMode && selectedEmployee) {
-      // Update existing employee
-      setEmployees(
-        employees.map((e) =>
-          e.id === selectedEmployee.id
-            ? {
-                ...e,
-                name: formData.name,
-                phone: formData.phone,
-                position: formData.position,
-                availability: {
-                  days: formData.availableDays || [],
-                  preferredHours: formData.preferredHours || "Matin",
-                },
-              }
-            : e,
-        ),
-      );
-    } else {
-      // Add new employee
-      const newEmployee: Employee = {
-        id: `emp-${employees.length + 1}`,
-        name: formData.name,
-        phone: formData.phone,
-        position: formData.position,
-        weeklyHours: 0,
-        shiftsCount: 0,
-        availability: {
-          days: formData.availableDays || [],
-          preferredHours: formData.preferredHours || "Matin",
-        },
-      };
-      setEmployees([...employees, newEmployee]);
+  const saveEmployee = async (formData: any) => {
+    // Validate form data
+    if (!formData.name) {
+      setValidationError("Le nom de l'employé est requis");
+      return;
     }
-    setDialogOpen(false);
+    if (!formData.position) {
+      setValidationError("Le poste de l'employé est requis");
+      return;
+    }
+
+    setIsSaving(true);
+    setValidationError("");
+
+    try {
+      // Show saving indicator using the notification service if available
+      let notificationId;
+      if (window.showNotification) {
+        notificationId = window.showNotification({
+          title: editMode ? "Mise à jour" : "Création",
+          description: `${editMode ? "Mise à jour" : "Création"} de l'employé en cours...`,
+          variant: "info",
+          position: "top-right",
+          autoClose: false,
+        });
+      } else {
+        // Fallback to the old method
+        const savingIndicator = document.createElement("div");
+        savingIndicator.className =
+          "fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+        savingIndicator.innerHTML = `
+          <div class="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+          <span>${editMode ? "Mise à jour" : "Création"} de l'employé en cours...</span>
+        `;
+        document.body.appendChild(savingIndicator);
+      }
+
+      if (editMode && selectedEmployee) {
+        // Update existing employee
+        const updatedEmployee = {
+          ...selectedEmployee,
+          name: formData.name,
+          phone: formData.phone,
+          position: formData.position,
+          availability: {
+            days: formData.availableDays || [],
+            preferredHours: formData.preferredHours || "Matin",
+          },
+        };
+
+        // Update local state
+        const updatedEmployees = employees.map((e) =>
+          e.id === selectedEmployee.id ? updatedEmployee : e,
+        );
+
+        // Update state
+        setEmployees(updatedEmployees);
+
+        // Sync with database
+        const syncSuccess = await DbSyncService.syncEmployees(updatedEmployees);
+        if (syncSuccess) {
+          // Also sync availability
+          await DbSyncService.syncAvailability(
+            updatedEmployee.id,
+            formData.availableDays || [],
+            formData.preferredHours || "Matin",
+          );
+        }
+
+        // Show success message using the notification service if available
+        if (window.showNotification) {
+          // Dismiss the loading notification if it exists
+          if (notificationId && window.dismissNotification) {
+            window.dismissNotification(notificationId);
+          }
+
+          window.showNotification({
+            title: "Mise à jour réussie",
+            description: "Employé mis à jour avec succès",
+            variant: "success",
+            position: "top-right",
+          });
+        } else {
+          // Fallback to the old method
+          document.body.removeChild(savingIndicator);
+          const successToast = document.createElement("div");
+          successToast.className =
+            "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+          successToast.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span>Employé mis à jour avec succès</span>
+          `;
+          document.body.appendChild(successToast);
+          setTimeout(() => document.body.removeChild(successToast), 3000);
+        }
+      } else {
+        // Add new employee
+        const newEmployee: Employee = {
+          id: `emp-${Date.now()}`,
+          name: formData.name,
+          phone: formData.phone,
+          position: formData.position,
+          weeklyHours: 0,
+          shiftsCount: 0,
+          availability: {
+            days: formData.availableDays || [],
+            preferredHours: formData.preferredHours || "Matin",
+          },
+        };
+
+        // Update local state with the new employee
+        const newEmployees = [...employees, newEmployee];
+
+        // Update state
+        setEmployees(newEmployees);
+
+        // Sync with database
+        const syncSuccess = await DbSyncService.syncEmployees(newEmployees);
+        if (syncSuccess) {
+          // Also sync availability
+          await DbSyncService.syncAvailability(
+            newEmployee.id,
+            formData.availableDays || [],
+            formData.preferredHours || "Matin",
+          );
+        }
+
+        // Show success message using the notification service if available
+        if (window.showNotification) {
+          // Dismiss the loading notification if it exists
+          if (notificationId && window.dismissNotification) {
+            window.dismissNotification(notificationId);
+          }
+
+          window.showNotification({
+            title: "Création réussie",
+            description: "Employé créé avec succès",
+            variant: "success",
+            position: "top-right",
+          });
+        } else {
+          // Fallback to the old method
+          document.body.removeChild(savingIndicator);
+          const successToast = document.createElement("div");
+          successToast.className =
+            "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+          successToast.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span>Employé créé avec succès</span>
+          `;
+          document.body.appendChild(successToast);
+          setTimeout(() => document.body.removeChild(successToast), 3000);
+        }
+      }
+
+      // Close dialog
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving employee:", error);
+      setValidationError("Une erreur est survenue lors de l'enregistrement");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetFilters = () => {
@@ -284,6 +528,86 @@ const EmployeeManagement: React.FC = () => {
   const positions = [
     ...new Set(employees.map((employee) => employee.position)),
   ];
+
+  // Store employees in localStorage to persist between page refreshes
+  useEffect(() => {
+    // Save to localStorage whenever employees change
+    try {
+      localStorage.setItem("employees", JSON.stringify(employees));
+      console.log("Saved employees to localStorage", employees.length);
+    } catch (error) {
+      console.error("Error saving employees to localStorage:", error);
+    }
+  }, [employees]);
+
+  // Load employees from localStorage on initial render
+  useEffect(() => {
+    try {
+      // Try to load from backup first (more reliable)
+      const backupEmployees = localStorage.getItem("employees_backup");
+      if (backupEmployees) {
+        const parsedEmployees = JSON.parse(backupEmployees);
+        if (Array.isArray(parsedEmployees) && parsedEmployees.length > 0) {
+          console.log("Loaded employees from backup", parsedEmployees.length);
+          setEmployees(parsedEmployees);
+
+          // Initialize mock database with these employees
+          MockDatabase.saveEmployees(parsedEmployees);
+          return; // Skip loading from regular storage
+        }
+      }
+
+      // Fall back to regular storage if backup not available
+      const savedEmployees = localStorage.getItem("employees");
+      if (savedEmployees) {
+        const parsedEmployees = JSON.parse(savedEmployees);
+        if (Array.isArray(parsedEmployees) && parsedEmployees.length > 0) {
+          console.log(
+            "Loaded employees from localStorage",
+            parsedEmployees.length,
+          );
+          setEmployees(parsedEmployees);
+
+          // Initialize mock database with these employees
+          MockDatabase.saveEmployees(parsedEmployees);
+        } else {
+          console.log(
+            "No valid employees found in localStorage, using defaults",
+          );
+          // Initialize mock database with default employees
+          MockDatabase.saveEmployees(employees);
+        }
+      } else {
+        console.log("No employees found in localStorage, using defaults");
+        // Initialize mock database with default employees
+        MockDatabase.saveEmployees(employees);
+      }
+
+      // Verify database tables and structure
+      const verifyDatabase = async () => {
+        try {
+          // Now verify data integrity
+          const integrityCheck = await DbSyncService.verifyDataIntegrity();
+          if (!integrityCheck.status) {
+            console.warn("Data integrity issues found:", integrityCheck.issues);
+            if (integrityCheck.repaired.length > 0) {
+              console.log("Repairs made:", integrityCheck.repaired);
+            }
+          }
+
+          // Force sync employees to database
+          const syncResult = await DbSyncService.syncEmployees(employees);
+          console.log("Initial employee sync result:", syncResult);
+        } catch (error) {
+          console.error("Error verifying database:", error);
+        }
+      };
+
+      verifyDatabase();
+    } catch (error) {
+      console.error("Error loading employees from localStorage:", error);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -579,10 +903,18 @@ const EmployeeManagement: React.FC = () => {
               </DialogTitle>
             </DialogHeader>
 
+            {validationError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-start mb-4">
+                <AlertTriangle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <p>{validationError}</p>
+              </div>
+            )}
+
             <EmployeeForm
               employee={selectedEmployee}
               onSave={saveEmployee}
               onCancel={() => setDialogOpen(false)}
+              isSaving={isSaving}
             />
           </DialogContent>
         </Dialog>
@@ -605,15 +937,27 @@ const EmployeeManagement: React.FC = () => {
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline" disabled={isDeleting}>
+                  Annuler
+                </Button>
               </DialogClose>
               <Button
                 variant="destructive"
                 onClick={confirmDelete}
                 className="flex items-center gap-2"
+                disabled={isDeleting}
               >
-                <Trash2 className="h-4 w-4" />
-                Supprimer
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Supprimer
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -627,12 +971,14 @@ interface EmployeeFormProps {
   employee: Employee | null;
   onSave: (data: any) => void;
   onCancel: () => void;
+  isSaving?: boolean;
 }
 
 const EmployeeForm: React.FC<EmployeeFormProps> = ({
   employee,
   onSave,
   onCancel,
+  isSaving = false,
 }) => {
   const [formData, setFormData] = useState<{
     name: string;
@@ -665,6 +1011,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   };
 
   const handleSubmit = () => {
+    // Basic validation
+    if (!formData.name.trim()) {
+      alert("Le nom de l'employé est requis");
+      return;
+    }
+    if (!formData.position) {
+      alert("Le poste de l'employé est requis");
+      return;
+    }
+
     onSave(formData);
   };
 
@@ -676,6 +1032,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           value={formData.name}
           onChange={(e) => handleChange("name", e.target.value)}
           placeholder="Nom et prénom"
+          disabled={isSaving}
         />
       </div>
 
@@ -685,6 +1042,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           value={formData.phone}
           onChange={(e) => handleChange("phone", e.target.value)}
           placeholder="06 XX XX XX XX"
+          disabled={isSaving}
         />
       </div>
 
@@ -693,6 +1051,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         <Select
           value={formData.position}
           onValueChange={(value) => handleChange("position", value)}
+          disabled={isSaving}
         >
           <SelectTrigger>
             <SelectValue placeholder="Sélectionner un poste" />
@@ -728,6 +1087,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
               }
               className="h-9 px-3"
               onClick={() => handleDayToggle(day)}
+              disabled={isSaving}
             >
               {label}
             </Button>
@@ -740,6 +1100,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         <Select
           value={formData.preferredHours}
           onValueChange={(value) => handleChange("preferredHours", value)}
+          disabled={isSaving}
         >
           <SelectTrigger>
             <SelectValue placeholder="Sélectionner un horaire" />
@@ -754,11 +1115,20 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       </div>
 
       <DialogFooter className="mt-6">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={isSaving}>
           Annuler
         </Button>
-        <Button onClick={handleSubmit}>
-          {employee ? "Enregistrer" : "Ajouter"}
+        <Button onClick={handleSubmit} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+              {employee ? "Enregistrement..." : "Ajout..."}
+            </>
+          ) : employee ? (
+            "Enregistrer"
+          ) : (
+            "Ajouter"
+          )}
         </Button>
       </DialogFooter>
     </div>
