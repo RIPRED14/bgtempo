@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { useRoutes, Routes, Route } from "react-router-dom";
-import Home from "./components/home";
+import { useRoutes } from "react-router-dom";
 import Dashboard from "./components/Admin/Dashboard";
 import EmployeeManagement from "./components/Admin/EmployeeManagement";
 import AbsenceManagement from "./components/ShiftManagement/AbsenceManagement";
@@ -9,22 +8,19 @@ import routes from "tempo-routes";
 import { Toaster } from "./components/ui/toaster";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import AppRoutes from "./routes";
 
 function App() {
+  // Debug information to help troubleshoot routing issues
+  console.log("App rendering, environment:", import.meta.env.MODE);
+  console.log("Current path:", window.location.pathname);
+
   return (
     <DndProvider backend={HTML5Backend}>
       <Suspense fallback={<p>Loading...</p>}>
         <div>
           {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/planning" element={<Home />} />
-            <Route path="/admin" element={<Dashboard />} />
-            <Route path="/employees" element={<EmployeeManagement />} />
-            <Route path="/absences" element={<AbsenceManagement />} />
-            <Route path="/reports" element={<Reports />} />
-            {import.meta.env.VITE_TEMPO && <Route path="/tempobook/*" />}
-          </Routes>
+          <AppRoutes />
           <Toaster />
         </div>
       </Suspense>

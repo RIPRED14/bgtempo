@@ -77,35 +77,56 @@ const ShiftDialog = ({
       ? employee.split(",").map((e) => e.trim())
       : [employee];
 
-    // Create a shift for each employee
-    employees.forEach((emp, index) => {
-      // Map employee name to ID
-      const employeeMap: Record<string, string> = {
-        "John Smith": "emp-1",
-        "Sarah Johnson": "emp-2",
-        "Mike Williams": "emp-3",
-        "Lisa Brown": "emp-4",
-        "David Miller": "emp-5",
-      };
+    // Show loading indicator
+    setValidationError("");
+    const savingIndicator = document.createElement("div");
+    savingIndicator.className =
+      "fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg z-50 flex items-center";
+    savingIndicator.innerHTML = `
+      <div class="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+      <span>Enregistrement en cours...</span>
+    `;
+    document.body.appendChild(savingIndicator);
 
-      const data = {
-        id: index === 0 ? shiftData.id : `shift-${Date.now()}-${index}`, // Generate unique IDs for multiple employees
-        employee: emp,
-        employeeId: employeeMap[emp] || "emp-1", // Add employeeId
-        employeeName: emp, // Ensure employeeName is set
-        day,
-        startTime,
-        endTime,
-        shiftType: getShiftType(startTime),
-      };
+    try {
+      // Create a shift for each employee
+      employees.forEach((emp, index) => {
+        // Map employee name to ID
+        const employeeMap: Record<string, string> = {
+          "John Smith": "emp-1",
+          "Sarah Johnson": "emp-2",
+          "Mike Williams": "emp-3",
+          "Lisa Brown": "emp-4",
+          "David Miller": "emp-5",
+        };
 
-      // Add a small delay between multiple employee saves to prevent race conditions
-      setTimeout(() => {
-        onSave(data);
-      }, index * 100);
-    });
+        const data = {
+          id: index === 0 ? shiftData.id : `shift-${Date.now()}-${index}`, // Generate unique IDs for multiple employees
+          employee: emp,
+          employeeId: employeeMap[emp] || "emp-1", // Add employeeId
+          employeeName: emp, // Ensure employeeName is set
+          day,
+          startTime,
+          endTime,
+          shiftType: getShiftType(startTime),
+        };
 
-    onOpenChange(false);
+        // Add a small delay between multiple employee saves to prevent race conditions
+        setTimeout(() => {
+          onSave(data);
+
+          // Remove the indicator after the last save
+          if (index === employees.length - 1) {
+            document.body.removeChild(savingIndicator);
+            onOpenChange(false);
+          }
+        }, index * 100);
+      });
+    } catch (error) {
+      console.error("Error saving shifts:", error);
+      document.body.removeChild(savingIndicator);
+      setValidationError("Une erreur est survenue lors de l'enregistrement");
+    }
   };
 
   const handleDeleteClick = () => {
@@ -125,6 +146,22 @@ const ShiftDialog = ({
     if (hour >= 11 && hour < 17) return "morning";
     if (hour >= 17 && hour < 24) return "evening";
     return "night";
+  };
+
+  // Calculate shift duration for display
+  const calculateShiftDuration = () => {
+    const startHour = parseInt(startTime.split(":")[0]);
+    const endHour = parseInt(endTime.split(":")[0]);
+    let hours = 0;
+
+    if (endHour > startHour) {
+      hours = endHour - startHour;
+    } else {
+      // Handle overnight shifts
+      hours = 24 - startHour + endHour;
+    }
+
+    return hours;
   };
 
   const isValidTimeRange = (
@@ -169,7 +206,7 @@ const ShiftDialog = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-3">
             {validationError && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-start">
                 <AlertTriangle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -284,6 +321,9 @@ const ShiftDialog = ({
               <p className="font-medium mb-1">Horaires du restaurant :</p>
               <p>Dim-Mer : 11h00 - 02h00</p>
               <p>Jeu-Sam : 11h00 - 07h00</p>
+              <p className="mt-2 font-medium text-blue-600">
+                Durée du shift : {calculateShiftDuration()} heures
+              </p>
             </div>
           </div>
 

@@ -92,6 +92,16 @@ const ShiftBlock: React.FC<ShiftBlockProps> = ({
     },
   }));
 
+  // Add a visual effect when dragging
+  const dragStyle = isDragging
+    ? {
+        opacity: 0.5,
+        boxShadow: "0 0 10px rgba(0, 0, 0, 0.3)",
+        transform: "scale(1.05)",
+        cursor: "grabbing",
+      }
+    : {};
+
   // Calculate shift duration to adjust the height
   const calculateHeight = () => {
     const startHour = parseInt(startTime.split(":")[0]);
@@ -105,41 +115,88 @@ const ShiftBlock: React.FC<ShiftBlockProps> = ({
       hours = 24 - startHour + endHour;
     }
 
-    // Minimum height of 80px, add 20px for each additional hour
-    return Math.max(80, 80 + (hours - 1) * 20);
+    // Smaller height to fit more shifts
+    return Math.max(60, 60 + (hours - 1) * 15);
+  };
+
+  // Get shift duration for display
+  const getShiftDuration = () => {
+    const startHour = parseInt(startTime.split(":")[0]);
+    const endHour = parseInt(endTime.split(":")[0]);
+    let hours = 0;
+
+    if (endHour > startHour) {
+      hours = endHour - startHour;
+    } else {
+      // Handle overnight shifts
+      hours = 24 - startHour + endHour;
+    }
+
+    return `${hours}h`;
   };
 
   return (
     <div
       className={cn(
-        "rounded-md p-2 cursor-pointer text-white shadow-md transition-all",
+        "rounded-md p-1 cursor-pointer text-white shadow-md transition-all",
         shiftColors[shiftType],
         isDragging ? "opacity-50" : "opacity-100",
-        "w-full max-w-[180px]",
+        "w-full max-w-full",
       )}
       onClick={onClick}
       ref={isDraggable ? drag : null}
       style={{
         touchAction: "none",
         height: `${calculateHeight()}px`,
+        ...dragStyle,
       }}
     >
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex flex-col h-full justify-between">
-              <div className="font-medium truncate">{employeeName}</div>
-              <div className="text-sm flex items-center">
+              <div className="flex items-center gap-1">
+                <div
+                  className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold"
+                  style={{
+                    backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${employeeName.replace(/ /g, "")}')`,
+                  }}
+                >
+                  {/* Initials as fallback */}
+                  {employeeName
+                    .split(" ")
+                    .map((name) => name[0])
+                    .join("")}
+                </div>
+                <div className="font-medium truncate text-xs">
+                  {employeeName}
+                </div>
+              </div>
+              <div className="text-xs flex items-center">
                 <Clock className="h-3 w-3 mr-1 opacity-80" />
-                {startTime} - {endTime}
+                {startTime}-{endTime} ({getShiftDuration()})
               </div>
             </div>
           </TooltipTrigger>
           <TooltipContent>
             <div className="space-y-1">
-              <p className="font-bold">{employeeName}</p>
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold"
+                  style={{
+                    backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${employeeName.replace(/ /g, "")}')`,
+                  }}
+                >
+                  {employeeName
+                    .split(" ")
+                    .map((name) => name[0])
+                    .join("")}
+                </div>
+                <p className="font-bold">{employeeName}</p>
+              </div>
               <p>
-                {getDayNameFr(day)}: {startTime} - {endTime}
+                {getDayNameFr(day)}: {startTime} - {endTime} (
+                {getShiftDuration()})
               </p>
               <p className="capitalize">{getShiftTypeFr(shiftType)}</p>
             </div>

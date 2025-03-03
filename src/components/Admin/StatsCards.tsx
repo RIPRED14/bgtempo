@@ -8,7 +8,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 
-export const StatsCards: React.FC = () => {
+export function StatsCards() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <Card className="bg-white shadow-sm border-slate-200 hover:shadow-md transition-shadow">
@@ -124,4 +124,4 @@ export const StatsCards: React.FC = () => {
       </Card>
     </div>
   );
-};
+}
