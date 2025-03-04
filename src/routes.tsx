@@ -8,6 +8,9 @@ import AbsenceManagement from "./components/ShiftManagement/AbsenceManagement";
 import Reports from "./components/Admin/Reports";
 import EmployeeLogin from "./components/EmployeePortal/EmployeeLogin";
 import EmployeeDashboard from "./components/EmployeePortal/EmployeeDashboard";
+import EmployeeSettings from "./components/EmployeePortal/EmployeeSettings";
+import EmployeeShiftHistory from "./components/EmployeePortal/EmployeeShiftHistory";
+import EmployeeAbsenceRequest from "./components/EmployeePortal/EmployeeAbsenceRequest";
 import AdminLogin from "./components/Admin/AdminLogin";
 
 const AppRoutes: React.FC = () => {
@@ -28,6 +31,9 @@ const AppRoutes: React.FC = () => {
       {/* Employee Portal Routes */}
       <Route path="/employee/login" element={<EmployeeLogin />} />
       <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+      <Route path="/employee/settings" element={<EmployeeSettings />} />
+      <Route path="/employee/history" element={<EmployeeShiftHistory />} />
+      <Route path="/employee/absence" element={<EmployeeAbsenceRequest />} />
 
       {/* Redirect any other routes to login */}
       <Route path="*" element={<Navigate to="/" />} />

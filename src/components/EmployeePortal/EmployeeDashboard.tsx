@@ -4,7 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, User, Download } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  User,
+  Download,
+  AlertTriangle,
+  LogOut,
+} from "lucide-react";
 import { Shift } from "@/lib/api";
 import { WeekStorage } from "@/lib/week-storage";
 import EmployeeLayout from "./EmployeeLayout";
@@ -14,6 +21,7 @@ const EmployeeDashboard: React.FC = () => {
   const [employeeInfo, setEmployeeInfo] = useState<{
     id: string;
     name: string;
+    username: string;
     canEdit: boolean;
   } | null>(null);
   const [currentWeek, setCurrentWeek] = useState<{
@@ -394,7 +402,7 @@ const EmployeeDashboard: React.FC = () => {
                   </div>
                   <h3 className="text-xl font-bold">{employeeInfo.name}</h3>
                   <p className="text-slate-500 text-sm">
-                    ID: {employeeInfo.id}
+                    Utilisateur: {employeeInfo.username}
                   </p>
                 </div>
 
@@ -458,6 +466,41 @@ const EmployeeDashboard: React.FC = () => {
                         </p>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t space-y-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/employee/settings")}
+                      className="w-full flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      <User className="h-4 w-4" />
+                      Paramètres du compte
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/employee/history")}
+                      className="w-full flex items-center justify-center gap-2 text-green-600 border-green-200 hover:bg-green-50"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Historique des shifts
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/employee/absence")}
+                      className="w-full flex items-center justify-center gap-2 text-amber-600 border-amber-200 hover:bg-amber-50"
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      Demander une absence
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Déconnexion
+                    </Button>
                   </div>
                 </div>
               </CardContent>
