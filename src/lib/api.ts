@@ -1,14 +1,15 @@
-import { supabase } from "./supabase";
-import { Database } from "@/types/supabase";
+// Types for the API
 
 export interface Employee {
   id: string;
   name: string;
   phone: string;
   position: string;
-  weeklyHours?: number;
-  shiftsCount?: number;
-  availability?: {
+  weeklyHours: number;
+  shiftsCount: number;
+  username?: string;
+  code?: string;
+  availability: {
     days: string[];
     preferredHours: string;
   };
@@ -16,405 +17,288 @@ export interface Employee {
 
 export interface Shift {
   id: string;
-  employeeName: string;
   employeeId: string;
+  employeeName: string;
   day: string;
   startTime: string;
   endTime: string;
   shiftType: "morning" | "evening" | "night";
 }
 
-export interface Availability {
-  id: string;
-  employeeId: string;
-  day: string;
-  preferredHours: string;
-}
-
 export interface Absence {
   id: string;
   employeeId: string;
-  employeeName?: string;
+  employeeName: string;
   startDate: string;
   endDate: string;
-  reason?: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
 }
 
-// Employees API
+// Mock API functions
 export const fetchEmployees = async (): Promise<Employee[]> => {
-  const { data, error } = await supabase.from("employees").select("*");
-
-  if (error) {
-    console.error("Error fetching employees:", error);
-    return [];
-  }
-
-  // Get shifts and availability for each employee
-  const employeesWithDetails = await Promise.all(
-    data.map(async (employee) => {
-      // Get shifts
-      const { data: shifts } = await supabase
-        .from("shifts")
-        .select("*")
-        .eq("employee_id", employee.id);
-
-      // Get availability
-      const { data: availability } = await supabase
-        .from("availability")
-        .select("*")
-        .eq("employee_id", employee.id);
-
-      // Calculate weekly hours
-      let weeklyHours = 0;
-      if (shifts) {
-        shifts.forEach((shift) => {
-          const startHour = parseInt(shift.start_time.split(":")[0]);
-          const endHour = parseInt(shift.end_time.split(":")[0]);
-          let hours = 0;
-
-          if (endHour > startHour) {
-            hours = endHour - startHour;
-          } else {
-            // Handle overnight shifts
-            hours = 24 - startHour + endHour;
-          }
-
-          weeklyHours += hours;
-        });
+  // In a real app, this would fetch from an API
+  // For now, we'll just return mock data from localStorage
+  try {
+    const savedEmployees = localStorage.getItem("employees");
+    if (savedEmployees) {
+      const employees = JSON.parse(savedEmployees);
+      if (Array.isArray(employees)) {
+        return employees;
       }
-
-      // Format availability
-      const availabilityDays = availability?.map((a) => a.day) || [];
-      const preferredHours =
-        availability && availability.length > 0
-          ? availability[0].preferred_hours
-          : "Flexible";
-
-      return {
-        id: employee.id,
-        name: employee.name,
-        phone: employee.phone || "",
-        position: employee.position,
-        weeklyHours,
-        shiftsCount: shifts?.length || 0,
-        availability: {
-          days: availabilityDays,
-          preferredHours,
-        },
-      };
-    }),
-  );
-
-  return employeesWithDetails;
-};
-
-export const createEmployee = async (
-  employee: Omit<Employee, "id">,
-): Promise<Employee | null> => {
-  // Insert employee
-  const { data, error } = await supabase
-    .from("employees")
-    .insert({
-      name: employee.name,
-      phone: employee.phone,
-      position: employee.position,
-    })
-    .select()
-    .single();
-
-  if (error || !data) {
-    console.error("Error creating employee:", error);
-    return null;
-  }
-
-  // Insert availability
-  if (employee.availability && employee.availability.days.length > 0) {
-    const availabilityInserts = employee.availability.days.map((day) => ({
-      employee_id: data.id,
-      day,
-      preferred_hours: employee.availability?.preferredHours || "Flexible",
-    }));
-
-    const { error: availabilityError } = await supabase
-      .from("availability")
-      .insert(availabilityInserts);
-
-    if (availabilityError) {
-      console.error("Error creating availability:", availabilityError);
     }
+  } catch (error) {
+    console.error("Error fetching employees:", error);
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone || "",
-    position: data.position,
-    weeklyHours: 0,
-    shiftsCount: 0,
-    availability: employee.availability,
-  };
+  // Return default employees if none found
+  return [
+    {
+      id: "emp-1",
+      name: "John Smith",
+      phone: "06 12 34 56 78",
+      position: "Chef",
+      weeklyHours: 38,
+      shiftsCount: 5,
+      username: "john",
+      code: "1234",
+      availability: {
+        days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        preferredHours: "Matin",
+      },
+    },
+    {
+      id: "emp-2",
+      name: "Sarah Johnson",
+      phone: "06 23 45 67 89",
+      position: "Serveuse",
+      weeklyHours: 25,
+      shiftsCount: 3,
+      username: "sarah",
+      code: "2345",
+      availability: {
+        days: ["Monday", "Wednesday", "Friday", "Saturday"],
+        preferredHours: "Soir",
+      },
+    },
+    {
+      id: "emp-3",
+      name: "Mike Williams",
+      phone: "06 34 56 78 90",
+      position: "Barman",
+      weeklyHours: 30,
+      shiftsCount: 4,
+      username: "mike",
+      code: "3456",
+      availability: {
+        days: ["Thursday", "Friday", "Saturday", "Sunday"],
+        preferredHours: "Soir",
+      },
+    },
+    {
+      id: "emp-4",
+      name: "Lisa Brown",
+      phone: "06 45 67 89 01",
+      position: "Serveuse",
+      weeklyHours: 22,
+      shiftsCount: 3,
+      username: "lisa",
+      code: "4567",
+      availability: {
+        days: ["Tuesday", "Thursday", "Saturday", "Sunday"],
+        preferredHours: "Matin",
+      },
+    },
+    {
+      id: "emp-5",
+      name: "David Miller",
+      phone: "06 56 78 90 12",
+      position: "Cuisinier",
+      weeklyHours: 35,
+      shiftsCount: 5,
+      username: "david",
+      code: "5678",
+      availability: {
+        days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        preferredHours: "Matin",
+      },
+    },
+  ];
 };
 
-export const updateEmployee = async (
-  employee: Employee,
-): Promise<Employee | null> => {
-  // Update employee
-  const { data, error } = await supabase
-    .from("employees")
-    .update({
-      name: employee.name,
-      phone: employee.phone,
-      position: employee.position,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", employee.id)
-    .select()
-    .single();
-
-  if (error || !data) {
-    console.error("Error updating employee:", error);
-    return null;
-  }
-
-  // Delete existing availability
-  await supabase.from("availability").delete().eq("employee_id", employee.id);
-
-  // Insert new availability
-  if (employee.availability && employee.availability.days.length > 0) {
-    const availabilityInserts = employee.availability.days.map((day) => ({
-      employee_id: employee.id,
-      day,
-      preferred_hours: employee.availability?.preferredHours || "Flexible",
-    }));
-
-    const { error: availabilityError } = await supabase
-      .from("availability")
-      .insert(availabilityInserts);
-
-    if (availabilityError) {
-      console.error("Error updating availability:", availabilityError);
-    }
-  }
-
-  return {
-    ...employee,
-  };
-};
-
-export const deleteEmployee = async (id: string): Promise<boolean> => {
-  const { error } = await supabase.from("employees").delete().eq("id", id);
-
-  if (error) {
-    console.error("Error deleting employee:", error);
-    return false;
-  }
-
-  return true;
-};
-
-// Shifts API
 export const fetchShifts = async (): Promise<Shift[]> => {
-  const { data, error } = await supabase
-    .from("shifts")
-    .select("*, employees(name)");
-
-  if (error) {
-    console.error("Error fetching shifts:", error);
-    return [];
-  }
-
-  return data.map((shift) => ({
-    id: shift.id,
-    employeeId: shift.employee_id,
-    employeeName: Array.isArray(shift.employees)
-      ? shift.employees[0]?.name || "Unknown"
-      : shift.employees?.name || "Unknown",
-    day: shift.day,
-    startTime: shift.start_time,
-    endTime: shift.end_time,
-    shiftType: getShiftType(shift.start_time),
-  }));
+  // In a real app, this would fetch from an API
+  // For now, we'll just return mock data
+  return [
+    {
+      id: "shift-1",
+      employeeId: "emp-1",
+      employeeName: "John Smith",
+      day: "Monday",
+      startTime: "11:00",
+      endTime: "17:00",
+      shiftType: "morning",
+    },
+    {
+      id: "shift-2",
+      employeeId: "emp-2",
+      employeeName: "Sarah Johnson",
+      day: "Monday",
+      startTime: "17:00",
+      endTime: "00:00",
+      shiftType: "evening",
+    },
+    {
+      id: "shift-3",
+      employeeId: "emp-3",
+      employeeName: "Mike Williams",
+      day: "Tuesday",
+      startTime: "11:00",
+      endTime: "17:00",
+      shiftType: "morning",
+    },
+    {
+      id: "shift-4",
+      employeeId: "emp-4",
+      employeeName: "Lisa Brown",
+      day: "Friday",
+      startTime: "00:00",
+      endTime: "07:00",
+      shiftType: "night",
+    },
+    {
+      id: "shift-5",
+      employeeId: "emp-5",
+      employeeName: "David Miller",
+      day: "Wednesday",
+      startTime: "17:00",
+      endTime: "00:00",
+      shiftType: "evening",
+    },
+  ];
 };
 
-export const createShift = async (
-  shift: Omit<Shift, "id">,
-): Promise<Shift | null> => {
-  const { data, error } = await supabase
-    .from("shifts")
-    .insert({
-      employee_id: shift.employeeId,
-      day: shift.day,
-      start_time: shift.startTime,
-      end_time: shift.endTime,
-      shift_type: shift.shiftType,
-    })
-    .select("*, employees(name)")
-    .single();
-
-  if (error || !data) {
-    console.error("Error creating shift:", error);
-    return null;
-  }
-
-  return {
-    id: data.id,
-    employeeId: data.employee_id,
-    employeeName: Array.isArray(data.employees)
-      ? data.employees[0]?.name || "Unknown"
-      : data.employees?.name || "Unknown",
-    day: data.day,
-    startTime: data.start_time,
-    endTime: data.end_time,
-    shiftType: data.shift_type as "morning" | "evening" | "night",
-  };
-};
-
-export const updateShift = async (shift: Shift): Promise<Shift | null> => {
-  const { data, error } = await supabase
-    .from("shifts")
-    .update({
-      employee_id: shift.employeeId,
-      day: shift.day,
-      start_time: shift.startTime,
-      end_time: shift.endTime,
-      shift_type: shift.shiftType,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", shift.id)
-    .select("*, employees(name)")
-    .single();
-
-  if (error || !data) {
-    console.error("Error updating shift:", error);
-    return null;
-  }
-
-  return {
-    id: data.id,
-    employeeId: data.employee_id,
-    employeeName: Array.isArray(data.employees)
-      ? data.employees[0]?.name || "Unknown"
-      : data.employees?.name || "Unknown",
-    day: data.day,
-    startTime: data.start_time,
-    endTime: data.end_time,
-    shiftType: data.shift_type as "morning" | "evening" | "night",
-  };
-};
-
-export const deleteShift = async (id: string): Promise<boolean> => {
-  const { error } = await supabase.from("shifts").delete().eq("id", id);
-
-  if (error) {
-    console.error("Error deleting shift:", error);
-    return false;
-  }
-
-  return true;
-};
-
-// Helper functions
-const getShiftType = (time: string): "morning" | "evening" | "night" => {
-  const hour = parseInt(time.split(":")[0]);
-  if (hour >= 11 && hour < 17) return "morning";
-  if (hour >= 17 && hour < 24) return "evening";
-  return "night";
-};
-
-// Absences API
 export const fetchAbsences = async (): Promise<Absence[]> => {
-  const { data, error } = await supabase
-    .from("absences")
-    .select("*, employees(name)");
-
-  if (error) {
+  // In a real app, this would fetch from an API
+  // For now, we'll try to get from localStorage first
+  try {
+    const savedRequests = localStorage.getItem("absenceRequests");
+    if (savedRequests) {
+      const requests = JSON.parse(savedRequests);
+      if (Array.isArray(requests)) {
+        return requests;
+      }
+    }
+  } catch (error) {
     console.error("Error fetching absences:", error);
-    return [];
   }
 
-  return data.map((absence) => ({
-    id: absence.id,
-    employeeId: absence.employee_id,
-    employeeName: Array.isArray(absence.employees)
-      ? absence.employees[0]?.name || "Unknown"
-      : absence.employees?.name || "Unknown",
-    startDate: absence.start_date,
-    endDate: absence.end_date,
-    reason: absence.reason,
-  }));
+  // Return default absences if none found
+  return [
+    {
+      id: "absence-1",
+      employeeId: "emp-3",
+      employeeName: "Mike Williams",
+      startDate: "2023-05-15",
+      endDate: "2023-05-16",
+      reason: "Rendez-vous médical",
+      status: "approved",
+      createdAt: "2023-05-10T10:30:00Z",
+    },
+    {
+      id: "absence-2",
+      employeeId: "emp-2",
+      employeeName: "Sarah Johnson",
+      startDate: "2023-05-20",
+      endDate: "2023-05-22",
+      reason: "Raisons personnelles",
+      status: "pending",
+      createdAt: "2023-05-12T14:15:00Z",
+    },
+    {
+      id: "absence-3",
+      employeeId: "emp-4",
+      employeeName: "Lisa Brown",
+      startDate: "2023-05-18",
+      endDate: "2023-05-18",
+      reason: "Rendez-vous administratif",
+      status: "rejected",
+      createdAt: "2023-05-11T09:45:00Z",
+    },
+  ];
 };
 
 export const createAbsence = async (
-  absence: Omit<Absence, "id">,
+  absence: Omit<Absence, "id" | "status" | "createdAt">,
 ): Promise<Absence | null> => {
-  const { data, error } = await supabase
-    .from("absences")
-    .insert({
-      employee_id: absence.employeeId,
-      start_date: absence.startDate,
-      end_date: absence.endDate,
-      reason: absence.reason,
-    })
-    .select("*, employees(name)")
-    .single();
+  try {
+    // Generate a unique ID
+    const id = `absence-${Date.now()}`;
+    const now = new Date().toISOString();
 
-  if (error || !data) {
+    // Create the new absence
+    const newAbsence: Absence = {
+      ...absence,
+      id,
+      status: "pending",
+      createdAt: now,
+    };
+
+    // Save to localStorage
+    const savedRequests = localStorage.getItem("absenceRequests") || "[]";
+    const requests = JSON.parse(savedRequests);
+    requests.push(newAbsence);
+    localStorage.setItem("absenceRequests", JSON.stringify(requests));
+
+    return newAbsence;
+  } catch (error) {
     console.error("Error creating absence:", error);
     return null;
   }
-
-  return {
-    id: data.id,
-    employeeId: data.employee_id,
-    employeeName: Array.isArray(data.employees)
-      ? data.employees[0]?.name || "Unknown"
-      : data.employees?.name || "Unknown",
-    startDate: data.start_date,
-    endDate: data.end_date,
-    reason: data.reason,
-  };
 };
 
 export const updateAbsence = async (
-  absence: Absence,
+  absence: Partial<Absence> & { id: string },
 ): Promise<Absence | null> => {
-  const { data, error } = await supabase
-    .from("absences")
-    .update({
-      employee_id: absence.employeeId,
-      start_date: absence.startDate,
-      end_date: absence.endDate,
-      reason: absence.reason,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", absence.id)
-    .select("*, employees(name)")
-    .single();
+  try {
+    // Get current absences
+    const savedRequests = localStorage.getItem("absenceRequests") || "[]";
+    const requests = JSON.parse(savedRequests);
 
-  if (error || !data) {
+    // Find the absence to update
+    const index = requests.findIndex((a: Absence) => a.id === absence.id);
+    if (index === -1) return null;
+
+    // Update the absence
+    const updatedAbsence = { ...requests[index], ...absence };
+    requests[index] = updatedAbsence;
+
+    // Save back to localStorage
+    localStorage.setItem("absenceRequests", JSON.stringify(requests));
+
+    return updatedAbsence;
+  } catch (error) {
     console.error("Error updating absence:", error);
     return null;
   }
-
-  return {
-    id: data.id,
-    employeeId: data.employee_id,
-    employeeName: Array.isArray(data.employees)
-      ? data.employees[0]?.name || "Unknown"
-      : data.employees?.name || "Unknown",
-    startDate: data.start_date,
-    endDate: data.end_date,
-    reason: data.reason,
-  };
 };
 
 export const deleteAbsence = async (id: string): Promise<boolean> => {
-  const { error } = await supabase.from("absences").delete().eq("id", id);
+  try {
+    // Get current absences
+    const savedRequests = localStorage.getItem("absenceRequests") || "[]";
+    const requests = JSON.parse(savedRequests);
 
-  if (error) {
+    // Filter out the absence to delete
+    const filteredRequests = requests.filter((a: Absence) => a.id !== id);
+
+    // Save back to localStorage
+    localStorage.setItem("absenceRequests", JSON.stringify(filteredRequests));
+
+    return true;
+  } catch (error) {
     console.error("Error deleting absence:", error);
     return false;
   }
-
-  return true;
 };

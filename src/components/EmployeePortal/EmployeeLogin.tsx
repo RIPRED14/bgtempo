@@ -14,19 +14,70 @@ import { User, Lock, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const EmployeeLogin: React.FC = () => {
-  const [employeeId, setEmployeeId] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Mock employee credentials - these would be set by the admin in a real app
-  const employeeCredentials = {
-    "emp-1": { password: "password1", name: "John Smith", canEdit: false },
-    "emp-2": { password: "password2", name: "Sarah Johnson", canEdit: false },
-    "emp-3": { password: "password3", name: "Mike Williams", canEdit: false },
-    "emp-4": { password: "password4", name: "Lisa Brown", canEdit: false },
-    "emp-5": { password: "password5", name: "David Miller", canEdit: false },
+  // Récupérer les employés depuis le localStorage pour avoir les identifiants à jour
+  const getEmployeeCredentials = () => {
+    try {
+      const savedEmployees = localStorage.getItem("employees");
+      if (savedEmployees) {
+        const employees = JSON.parse(savedEmployees);
+        if (Array.isArray(employees)) {
+          const credentials: Record<string, any> = {};
+          employees.forEach((employee) => {
+            if (employee.username && employee.code) {
+              credentials[employee.username] = {
+                password: employee.code,
+                id: employee.id,
+                name: employee.name,
+                canEdit: false,
+              };
+            }
+          });
+          return credentials;
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des identifiants:", error);
+    }
+
+    // Fallback aux identifiants par défaut
+    return {
+      john: {
+        password: "1234",
+        id: "emp-1",
+        name: "John Smith",
+        canEdit: false,
+      },
+      sarah: {
+        password: "2345",
+        id: "emp-2",
+        name: "Sarah Johnson",
+        canEdit: false,
+      },
+      mike: {
+        password: "3456",
+        id: "emp-3",
+        name: "Mike Williams",
+        canEdit: false,
+      },
+      lisa: {
+        password: "4567",
+        id: "emp-4",
+        name: "Lisa Brown",
+        canEdit: false,
+      },
+      david: {
+        password: "5678",
+        id: "emp-5",
+        name: "David Miller",
+        canEdit: false,
+      },
+    };
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -34,32 +85,38 @@ const EmployeeLogin: React.FC = () => {
     setError("");
     setIsLoading(true);
 
+    // Récupérer les identifiants à jour
+    const employeeCredentials = getEmployeeCredentials();
+    console.log("Identifiants disponibles:", Object.keys(employeeCredentials));
+
     // Simulate API call
     setTimeout(() => {
       // Check if employee exists and password matches
       if (
-        employeeId in employeeCredentials &&
-        employeeCredentials[employeeId as keyof typeof employeeCredentials]
-          .password === password
+        username in employeeCredentials &&
+        employeeCredentials[username].password === password
       ) {
+        console.log("Connexion réussie pour:", username);
         // Store employee info in localStorage
         localStorage.setItem(
           "employeePortalUser",
           JSON.stringify({
-            id: employeeId,
-            name: employeeCredentials[
-              employeeId as keyof typeof employeeCredentials
-            ].name,
-            canEdit:
-              employeeCredentials[
-                employeeId as keyof typeof employeeCredentials
-              ].canEdit,
+            id: employeeCredentials[username].id,
+            name: employeeCredentials[username].name,
+            username: username,
+            canEdit: employeeCredentials[username].canEdit,
           }),
         );
 
         // Redirect to employee dashboard
         navigate("/employee/dashboard");
       } else {
+        console.log(
+          "Échec de connexion pour:",
+          username,
+          "Mot de passe fourni:",
+          password,
+        );
         setError("Identifiant ou mot de passe incorrect");
       }
       setIsLoading(false);
@@ -86,15 +143,15 @@ const EmployeeLogin: React.FC = () => {
           <form onSubmit={handleLogin}>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="employeeId">Identifiant employé</Label>
+                <Label htmlFor="username">Nom d'utilisateur</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
-                    id="employeeId"
-                    placeholder="Votre identifiant (ex: emp-1)"
+                    id="username"
+                    placeholder="Votre nom d'utilisateur"
                     className="pl-9"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -105,11 +162,14 @@ const EmployeeLogin: React.FC = () => {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="password"
-                    type="password"
-                    placeholder="Votre mot de passe"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Votre code à 4 chiffres"
                     className="pl-9"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    maxLength={4}
                     required
                   />
                 </div>

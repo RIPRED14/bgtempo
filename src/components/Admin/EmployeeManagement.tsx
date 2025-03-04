@@ -53,6 +53,8 @@ interface Employee {
   position: string;
   weeklyHours: number;
   shiftsCount: number;
+  username?: string;
+  code?: string;
   availability: {
     days: string[];
     preferredHours: string;
@@ -68,6 +70,8 @@ const EmployeeManagement: React.FC = () => {
       position: "Chef",
       weeklyHours: 38,
       shiftsCount: 5,
+      username: "john",
+      code: "1234",
       availability: {
         days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         preferredHours: "Matin",
@@ -80,6 +84,8 @@ const EmployeeManagement: React.FC = () => {
       position: "Serveuse",
       weeklyHours: 25,
       shiftsCount: 3,
+      username: "sarah",
+      code: "2345",
       availability: {
         days: ["Monday", "Wednesday", "Friday", "Saturday"],
         preferredHours: "Soir",
@@ -92,6 +98,8 @@ const EmployeeManagement: React.FC = () => {
       position: "Barman",
       weeklyHours: 30,
       shiftsCount: 4,
+      username: "mike",
+      code: "3456",
       availability: {
         days: ["Thursday", "Friday", "Saturday", "Sunday"],
         preferredHours: "Soir",
@@ -104,6 +112,8 @@ const EmployeeManagement: React.FC = () => {
       position: "Serveuse",
       weeklyHours: 22,
       shiftsCount: 3,
+      username: "lisa",
+      code: "4567",
       availability: {
         days: ["Tuesday", "Thursday", "Saturday", "Sunday"],
         preferredHours: "Matin",
@@ -116,6 +126,8 @@ const EmployeeManagement: React.FC = () => {
       position: "Cuisinier",
       weeklyHours: 35,
       shiftsCount: 5,
+      username: "david",
+      code: "5678",
       availability: {
         days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         preferredHours: "Matin",
@@ -394,6 +406,8 @@ const EmployeeManagement: React.FC = () => {
           name: formData.name,
           phone: formData.phone,
           position: formData.position,
+          username: formData.username,
+          code: formData.code,
           availability: {
             days: formData.availableDays || [],
             preferredHours: formData.preferredHours || "Matin",
@@ -454,6 +468,8 @@ const EmployeeManagement: React.FC = () => {
           name: formData.name,
           phone: formData.phone,
           position: formData.position,
+          username: formData.username,
+          code: formData.code,
           weeklyHours: 0,
           shiftsCount: 0,
           availability: {
@@ -748,6 +764,7 @@ const EmployeeManagement: React.FC = () => {
                           <ArrowUpDown className="ml-2 h-4 w-4" />
                         </div>
                       </TableHead>
+                      <TableHead>Identifiants</TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-slate-50"
                         onClick={() => handleSort("weeklyHours")}
@@ -793,6 +810,22 @@ const EmployeeManagement: React.FC = () => {
                             >
                               {employee.position}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="text-xs text-slate-500">
+                                Nom d'utilisateur:{" "}
+                                <span className="font-medium text-slate-700">
+                                  {employee.username || "-"}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Code:{" "}
+                                <span className="font-medium text-slate-700">
+                                  {employee.code || "-"}
+                                </span>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -880,7 +913,7 @@ const EmployeeManagement: React.FC = () => {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={8}
                           className="h-24 text-center text-slate-500"
                         >
                           Aucun employé trouvé
@@ -984,12 +1017,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     name: string;
     phone: string;
     position: string;
+    username: string;
+    code: string;
     availableDays: string[];
     preferredHours: string;
   }>({
     name: employee?.name || "",
     phone: employee?.phone || "",
     position: employee?.position || "",
+    username: employee?.username || "",
+    code: employee?.code || "",
     availableDays: employee?.availability.days || [],
     preferredHours: employee?.availability.preferredHours || "Matin",
   });
@@ -1065,6 +1102,31 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             <SelectItem value="Hôte/Hôtesse">Hôte/Hôtesse</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Nom d'utilisateur</label>
+          <Input
+            value={formData.username}
+            onChange={(e) => handleChange("username", e.target.value)}
+            placeholder="Nom d'utilisateur"
+            disabled={isSaving}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Code d'accès</label>
+          <Input
+            value={formData.code}
+            onChange={(e) => handleChange("code", e.target.value)}
+            placeholder="Code à 4 chiffres"
+            maxLength={4}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            disabled={isSaving}
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
